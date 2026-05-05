@@ -18,19 +18,24 @@
     <div id="result"></div>
 
     <script>
-        async function analyze() {
-            const jd = document.getElementById('jd').value;
-            document.getElementById('result').style.display = 'block';
-            document.getElementById('result').innerHTML = 'Analyzing...';
-            
-            const response = await fetch('/analyze');
-            const data = await response.json();
-            
-            document.getElementById('result').innerHTML = 
-                '<h3>Required Skills:</h3>' + data.skills.join(', ') +
-                '<h3>Study Timeline:</h3>' + data.timeline +
-                '<h3>Difficulty:</h3>' + data.difficulty;
-        }
+       async function analyze() {
+    const jd = document.getElementById('jd').value;
+    if (!jd) { alert('Please paste a job description first!'); return; }
+    document.getElementById('result').style.display = 'block';
+    document.getElementById('result').innerHTML = 'Analyzing...';
+    
+    const response = await fetch('/analyze', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({jd: jd})
+    });
+    const data = await response.json();
+    
+    document.getElementById('result').innerHTML = 
+        '<h3>Required Skills:</h3>' + data.skills.join(', ') +
+        '<h3>Study Timeline:</h3>' + data.timeline +
+        '<h3>Difficulty:</h3>' + data.difficulty;
+}
     </script>
 </body>
 </html>
