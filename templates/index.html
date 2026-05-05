@@ -3,39 +3,89 @@
 <head>
     <title>AI Job Prep Platform</title>
     <style>
-        body { font-family: Arial; max-width: 800px; margin: 50px auto; padding: 20px; }
-        textarea { width: 100%; height: 150px; margin: 10px 0; }
-        button { background: #4CAF50; color: white; padding: 10px 20px; border: none; cursor: pointer; border-radius: 4px; }
+        body { font-family: Arial; max-width: 1200px; margin: 50px auto; padding: 20px; }
+        textarea { width: 100%; height: 150px; margin: 10px 0; padding: 10px; }
+        button { background: #4CAF50; color: white; padding: 10px 20px; border: none; cursor: pointer; border-radius: 4px; font-size: 16px; margin-right: 10px; }
         button:hover { background: #45a049; }
-        #result { margin-top: 20px; padding: 15px; background: #f0f0f0; display: none; border-radius: 4px; }
+        button:disabled { background: #cccccc; cursor: not-allowed; }
+        #langBtn { background: #2196F3; }
+        #langBtn:hover { background: #1976D2; }
+        #result { margin-top: 20px; display: none; }
+        .column { background: #f9f9f9; padding: 15px; margin: 10px 0; border-radius: 4px; border-left: 4px solid #4CAF50; }
+        .column h3 { margin-top: 0; color: #333; }
+        .column ul { padding-left: 20px; }
+        .column li { margin: 5px 0; }
+        .difficulty { margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 4px; }
     </style>
 </head>
 <body>
     <h1>AI Job Prep Platform</h1>
     <p>Paste a job description and get a personalized skill checklist and study plan.</p>
     <textarea id="jd" placeholder="Paste the job description here..."></textarea>
-    <button onclick="analyze()">Analyze JD</button>
+    <div>
+        <button onclick="analyze()">Analyze JD</button>
+        <button onclick="toggleLang()" id="langBtn">中文 / English</button>
+    </div>
     <div id="result"></div>
 
     <script>
-       async function analyze() {
-    const jd = document.getElementById('jd').value;
-    if (!jd) { alert('Please paste a job description first!'); return; }
-    document.getElementById('result').style.display = 'block';
-    document.getElementById('result').innerHTML = 'Analyzing...';
-    
-    const response = await fetch('/analyze', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({jd: jd})
-    });
-    const data = await response.json();
-    
-    document.getElementById('result').innerHTML = 
-        '<h3>Required Skills:</h3>' + data.skills.join(', ') +
-        '<h3>Study Timeline:</h3>' + data.timeline +
-        '<h3>Difficulty:</h3>' + data.difficulty;
-}
+        let currentData = null;
+        let currentLang = 'en';
+
+        async function analyze() {
+            const jd = document.getElementById('jd').value;
+            if (!jd) { alert('Please paste a job description first!'); return; }
+            
+            const btn = document.querySelector('button');
+            btn.disabled = true;
+            btn.textContent = 'Analyzing...';
+            document.getElementById('result').style.display = 'block';
+            document.getElementById('result').innerHTML = '⏳ Analyzing your job description...';
+            
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({jd: jd})
+                });
+                currentData = await response.json();
+                renderResult();
+            } catch(e) {
+                document.getElementById('result').innerHTML = '❌ Something went wrong. Please try again.';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Analyze JD';
+            }
+        }
+
+        function toggleLang() {
+            currentLang = currentLang === 'en' ? 'zh' : 'en';
+            if (currentData) renderResult();
+        }
+
+        function renderResult() {
+            const d = currentData;
+            const lang = currentLang;
+            document.getElementById('result').innerHTML = `
+                <div class="column">
+                    <h3>📋 ${lang === 'en' ? 'Required Skills' : '所需技能'}</h3>
+                    <ul>${d['skills_'+lang].map(s => `<li>${s}</li>`).join('')}</ul>
+                </div>
+                <div class="column">
+                    <h3>🎯 ${lang === 'en' ? 'Interview Topics' : '面试话题'}</h3>
+                    <ul>${d['interview_topics_'+lang].map(t => `<li>${t}</li>`).join('')}</ul>
+                </div>
+                <div class="column">
+                    <h3>📅 ${lang === 'en' ? '7-Day Study Plan' : '7天学习计划'}</h3>
+                    <ul>${d['study_plan_7_'+lang].map(x => `<li>${x}</li>`).join('')}</ul>
+                </div>
+                <div class="column">
+                    <h3>📅 ${lang === 'en' ? '30-Day Study Plan' : '30天学习计划'}</h3>
+                    <ul>${d['study_plan_30_'+lang].map(x => `<li>${x}</li>`).join('')}</ul>
+                </div>
+                <div class="difficulty">${lang === 'en' ? 'Difficulty' : '难度'}: <strong>${d.difficulty}</strong></div>
+            `;
+        }
     </script>
 </body>
 </html>
